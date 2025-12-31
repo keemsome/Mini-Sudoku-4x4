@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Magic Mini Sudoku</title>
+    
+    <!-- Fonts: Quicksand -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Quicksand', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                50: '#f0fdf4',
+                100: '#dcfce7',
+                200: '#bbf7d0',
+                500: '#22c55e',
+                600: '#16a34a',
+                900: '#14532d',
+              },
+              accent: {
+                500: '#f59e0b',
+              }
+            },
+            boxShadow: {
+              'soft': '0 10px 40px -10px rgba(0,0,0,0.1)',
+              'inner-light': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
+            }
+          },
+        },
+      }
+    </script>
+
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.263.1"
+      }
+    }
+    </script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      body {
+        background-color: #f0fdf4;
+        background-image: radial-gradient(#dcfce7 1px, transparent 1px);
+        background-size: 24px 24px;
+        overscroll-behavior: none;
+        touch-action: manipulation;
+      }
+      .cell-anim {
+        transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .btn-press:active {
+        transform: scale(0.92);
+      }
+      .bounce-in {
+        animation: bounce 0.5s cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+      }
+      @keyframes bounce {
+        0% { transform: scale(0.8); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      ::-webkit-scrollbar { width: 0px; }
+      
+      @media (max-height: 700px) {
+        .app-container { padding-top: 1rem; padding-bottom: 1rem; }
+        .header-section { margin-bottom: 1rem; }
+      }
+    </style>
+</head>
+<body>
+    <div id="root" class="min-h-screen flex items-center justify-center p-4"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useCallback } from 'react';
+        import ReactDOM from 'react-dom/client';
+        import { Star, Eraser, CheckCircle2, Zap, RefreshCw, Info, Heart, PartyPopper, LogOut, Sparkles } from 'lucide-react';
+
+        const SIZE = 4;
+        const Difficulty = {
+            EASY: 'Beginner 🌟',
+            MEDIUM: 'Explorer 🔎',
+            HARD: 'Master 👑',
+        };
+
+        const shuffle = (array) => {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        };
+
+        const generateSolution = () => {
+            let grid = [[1, 2, 3, 4], [3, 4, 1, 2], [2, 1, 4, 3], [4, 3, 2, 1]];
+            const nums = shuffle([1, 2, 3, 4]);
+            for (let r = 0; r < SIZE; r++) {
+                for (let c = 0; c < SIZE; c++) grid[r][c] = nums[grid[r][c] - 1];
+            }
+            if (Math.random() > 0.5) [grid[0], grid[1]] = [grid[1], grid[0]];
+            if (Math.random() > 0.5) [grid[2], grid[3]] = [grid[3], grid[2]];
+            const swapCols = (c1, c2) => {
+                for (let r = 0; r < SIZE; r++) {
+                    const temp = grid[r][c1]; grid[r][c1] = grid[r][c2]; grid[r][c2] = temp;
+                }
+            };
+            if (Math.random() > 0.5) swapCols(0, 1);
+            if (Math.random() > 0.5) swapCols(2, 3);
+            return grid;
+        };
+
+        const createGame = (difficulty) => {
+            const solution = generateSolution();
+            let cluesToKeep = 12;
+            if (difficulty === Difficulty.MEDIUM) cluesToKeep = 9;
+            if (difficulty === Difficulty.HARD) cluesToKeep = 6;
+            const indices = shuffle(Array.from({ length: 16 }, (_, i) => i));
+            const keepIndices = new Set(indices.slice(0, cluesToKeep));
+            const initialGrid = [];
+            for (let r = 0; r < SIZE; r++) {
+                const row = [];
+                for (let c = 0; c < SIZE; c++) {
+                    const isFixed = keepIndices.has(r * SIZE + c);
+                    row.push({ row: r, col: c, value: isFixed ? solution[r][c] : 0, isFixed, isError: false });
+                }
+                initialGrid.push(row);
+            }
+            return { initialGrid, solution };
+        };
+
+        const Board = ({ grid, selectedCell, onCellClick, status }) => {
+            if (!grid || grid.length < SIZE) return <div className="h-[240px] flex items-center justify-center text-slate-500">Magic loading... 🌈</div>;
+
+            const quadrants = [
+                [[0,0], [0,1], [1,0], [1,1]], 
+                [[0,2], [0,3], [1,2], [1,3]], 
+                [[2,0], [2,1], [3,0], [3,1]], 
+                [[2,2], [2,3], [3,2], [3,3]]
+            ];
+
+            return (
+                <div className="bg-white p-3 sm:p-4 rounded-[24px] sm:rounded-[32px] shadow-soft border-2 sm:border-4 border-white select-none relative max-w-[95vw] mx-auto">
+                    {/* Visual Dividers */}
+                    <div className="absolute left-1/2 top-4 bottom-4 w-[2px] sm:w-[3px] bg-brand-100 transform -translate-x-1/2 z-0 rounded-full"></div>
+                    <div className="absolute top-1/2 left-4 right-4 h-[2px] sm:h-[3px] bg-brand-100 transform -translate-y-1/2 z-0 rounded-full"></div>
+
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4 relative z-10">
+                        {quadrants.map((quad, qIdx) => (
+                            <div key={qIdx} className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                                {quad.map(([r, c]) => {
+                                    const cell = grid[r][c];
+                                    const isSelected = selectedCell?.r === r && selectedCell?.c === c;
+                                    const isPlaying = status === 'playing';
+
+                                    let baseStyle = "w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center text-xl sm:text-3xl font-extrabold rounded-lg sm:rounded-xl cursor-pointer cell-anim relative ";
+                                    
+                                    if (cell.isFixed) {
+                                        // Darker font for better readability
+                                        baseStyle += "bg-slate-50 text-slate-500 shadow-inner-light";
+                                    } else if (cell.isError) {
+                                        baseStyle += "bg-orange-50 text-orange-600 border-2 sm:border-3 border-orange-200";
+                                    } else if (cell.value !== 0) {
+                                        baseStyle += "bg-brand-50 text-brand-700 border-2 sm:border-3 border-brand-100";
+                                    } else {
+                                        baseStyle += "bg-white text-slate-700 border-2 sm:border-3 border-slate-50 hover:border-brand-100";
+                                    }
+
+                                    if (isSelected && isPlaying) {
+                                        baseStyle += " ring-4 sm:ring-6 ring-brand-100 ring-offset-0 scale-105 z-10";
+                                    }
+
+                                    return (
+                                        <div key={`${r}-${c}`} onClick={() => isPlaying && onCellClick(r, c)} className={baseStyle}>
+                                            {cell.value !== 0 ? cell.value : ''}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const Controls = ({ onInput, onCheck, onHint, onGiveUp, onNewGame, status, hintUsed }) => {
+            const isPlaying = status === 'playing';
+            return (
+                <div className="w-full max-w-sm mt-5 sm:mt-6 space-y-4 sm:space-y-5">
+                    {/* Number Pad - Reduced size by 1 step */}
+                    <div className={`grid grid-cols-5 gap-2 transition-opacity duration-300 ${!isPlaying ? 'opacity-30 pointer-events-none' : ''}`}>
+                        {[1, 2, 3, 4].map(num => (
+                            <button key={num} onClick={() => onInput(num)} 
+                                className="aspect-square bg-white border-b-4 sm:border-b-6 border-slate-200 rounded-lg sm:rounded-xl text-xl sm:text-2xl font-black text-slate-700 active:border-b-0 active:translate-y-1 transition-all shadow-sm hover:bg-slate-50 btn-press">
+                                {num}
+                            </button>
+                        ))}
+                         <button onClick={() => onInput(0)} 
+                            className="aspect-square bg-slate-100 border-b-4 sm:border-b-6 border-slate-300 rounded-lg sm:rounded-xl text-slate-600 active:border-b-0 active:translate-y-1 transition-all shadow-sm hover:bg-slate-200 flex items-center justify-center btn-press">
+                            <Eraser size={20} className="sm:hidden" />
+                            <Eraser size={24} className="hidden sm:block" />
+                        </button>
+                    </div>
+
+                    {/* Action Buttons - Reduced padding/text size */}
+                    <div className="flex flex-col gap-2.5">
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <button onClick={onCheck} disabled={!isPlaying} 
+                                className="flex items-center justify-center gap-2 bg-brand-500 hover:bg-brand-600 text-white py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-base sm:text-lg font-black shadow-lg shadow-brand-500/10 active:scale-95 transition-all disabled:opacity-50 btn-press">
+                                <CheckCircle2 size={18} className="sm:size-20" strokeWidth={3} /> Check!
+                            </button>
+                            <button onClick={onHint} disabled={!isPlaying || hintUsed} 
+                                className={`flex items-center justify-center gap-2 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-base sm:text-lg font-black active:scale-95 transition-all btn-press border-b-4
+                                    ${hintUsed 
+                                        ? 'bg-slate-200 text-slate-500 border-slate-300 cursor-not-allowed' 
+                                        : 'bg-amber-400 text-white border-amber-600 hover:bg-amber-500 shadow-lg shadow-amber-500/10'}`}
+                            >
+                                <Zap size={18} className="sm:size-20" fill="currentColor" /> {hintUsed ? 'Used' : 'Hint!'}
+                            </button>
+                        </div>
+                        
+                        <button onClick={onGiveUp} disabled={!isPlaying}
+                            className="flex items-center justify-center gap-2 py-2.5 rounded-lg sm:rounded-xl text-slate-600 hover:text-slate-800 font-bold active:scale-95 transition-all btn-press border border-slate-200 hover:bg-white disabled:opacity-30 text-xs sm:text-sm">
+                            <LogOut size={16} /> I'm Done for Now
+                        </button>
+                    </div>
+
+                    <div className="text-center pt-1">
+                        <button onClick={onNewGame} className="text-brand-600 font-bold text-sm sm:text-base flex items-center justify-center gap-2 mx-auto transition-colors hover:bg-white px-3 py-1.5 rounded-full">
+                            <RefreshCw size={16} /> Start a New Game
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [difficulty, setDifficulty] = useState(Difficulty.EASY);
+            const [grid, setGrid] = useState([]);
+            const [solution, setSolution] = useState([]);
+            const [status, setStatus] = useState('playing'); 
+            const [selectedCell, setSelectedCell] = useState(null);
+            const [hintUsed, setHintUsed] = useState(false);
+            const [msg, setMsg] = useState(null);
+            const [mistakes, setMistakes] = useState(0);
+            const [motto, setMotto] = useState("");
+
+            const startNewGame = useCallback((diff = difficulty) => {
+                const { initialGrid, solution: sol } = createGame(diff);
+                setGrid(initialGrid);
+                setSolution(sol);
+                setStatus('playing');
+                setHintUsed(false);
+                setSelectedCell(null);
+                setMsg(null);
+                setMistakes(0);
+                setMotto("");
+            }, [difficulty]);
+
+            useEffect(() => { startNewGame(); }, []);
+
+            const handleInput = useCallback((val) => {
+                if (status !== 'playing' || !selectedCell || !grid || grid.length < SIZE) return;
+                const { r, c } = selectedCell;
+                if (!grid[r] || !grid[r][c] || grid[r][c].isFixed) return;
+                
+                setGrid(prev => {
+                    const next = prev.map(row => row.map(cell => ({...cell})));
+                    next[r][c].value = val;
+                    next[r][c].isError = false;
+                    return next;
+                });
+                if (msg?.type !== 'success') setMsg(null);
+            }, [status, selectedCell, grid, msg]);
+
+            const handleCheck = useCallback(() => {
+                if (status !== 'playing' || !grid || grid.length < SIZE) return;
+                
+                const nextGrid = grid.map(row => row.map(cell => ({
+                    ...cell,
+                    isError: cell.value !== 0 && cell.value !== solution[cell.row][cell.col]
+                })));
+                setGrid(nextGrid);
+                
+                const hasErr = nextGrid.some(r => r.some(c => c.isError));
+                const isFull = nextGrid.every(r => r.every(c => c.value !== 0));
+                
+                if (hasErr) {
+                    setMistakes(m => m + 1);
+                    setMsg({ text: "Oopsie! Let's check! 🕵️‍♂️", type: 'error' });
+                } else if (!isFull) {
+                    setMsg({ text: "Yay! Looking great! 🌟", type: 'info' });
+                } else {
+                    setStatus('won');
+                    setMotto(mistakes === 0 ? "You're a Math Superhero! 🦸‍♂️✨" : "Great job! You never gave up! 💪🌈");
+                    setMsg(null);
+                    setSelectedCell(null);
+                }
+            }, [status, grid, solution, mistakes]);
+
+            const handleHint = () => {
+                if (status !== 'playing' || hintUsed || !grid || grid.length < SIZE) return;
+                
+                let target = null;
+                if (selectedCell && !grid[selectedCell.r][selectedCell.c].isFixed && grid[selectedCell.r][selectedCell.c].value === 0) {
+                    target = selectedCell;
+                } else {
+                    for(let r=0; r<SIZE; r++) {
+                        for(let c=0; c<SIZE; c++) {
+                            if (!grid[r][c].isFixed && grid[r][c].value === 0) { target = {r, c}; break; }
+                        }
+                        if (target) break;
+                    }
+                }
+                
+                if (target) {
+                    setGrid(prev => {
+                        const next = prev.map(row => row.map(cell => ({...cell})));
+                        next[target.r][target.c].value = solution[target.r][target.c];
+                        next[target.r][target.c].isError = false;
+                        return next;
+                    });
+                    setHintUsed(true);
+                    setMsg({ text: "A little bit of magic! ✨", type: 'success' });
+                }
+            };
+
+            const handleGiveUp = () => {
+                if (status !== 'playing') return;
+                setStatus('given_up');
+                setMotto("You tried your best! Every puzzle makes you smarter! 🧠💖");
+                setMsg(null);
+                setSelectedCell(null);
+            };
+
+            useEffect(() => {
+                const handler = (e) => {
+                    if (status !== 'playing' || !grid || grid.length < SIZE) return;
+                    if (['1','2','3','4'].includes(e.key)) handleInput(parseInt(e.key));
+                    if (e.key === 'Backspace' || e.key === 'Delete') handleInput(0);
+                    if (e.key === 'Enter') handleCheck();
+                    if (selectedCell) {
+                        let { r, c } = selectedCell;
+                        if (e.key === 'ArrowUp') r = (r - 1 + 4) % 4;
+                        if (e.key === 'ArrowDown') r = (r + 1) % 4;
+                        if (e.key === 'ArrowLeft') c = (c - 1 + 4) % 4;
+                        if (e.key === 'ArrowRight') c = (c + 1) % 4;
+                        setSelectedCell({ r, c });
+                    }
+                };
+                window.addEventListener('keydown', handler);
+                return () => window.removeEventListener('keydown', handler);
+            }, [selectedCell, status, grid, handleInput, handleCheck]);
+
+            return (
+                <div className="w-full max-w-lg flex flex-col items-center app-container">
+                    {/* Header - Reduced font sizes */}
+                    <div className="text-center mb-5 sm:mb-8 w-full header-section">
+                        <div className="flex flex-col items-center justify-center gap-1.5 mb-3">
+                             <div className="bg-white p-2.5 sm:p-3.5 rounded-full shadow-lg text-brand-500 mb-0.5 bounce-in">
+                                <Sparkles size={28} className="sm:size-32" fill="currentColor" strokeWidth={3} />
+                             </div>
+                             <h1 className="text-2xl sm:text-3xl font-[900] text-brand-900 tracking-tight">Magic Sudoku</h1>
+                             <p className="text-brand-600 font-bold text-xs sm:text-sm">The Number Puzzle Adventure!</p>
+                        </div>
+                        
+                        <div className="bg-brand-100 p-1 rounded-xl sm:rounded-2xl flex w-full">
+                            {Object.values(Difficulty).map(d => (
+                                <button key={d} onClick={() => { setDifficulty(d); startNewGame(d); }}
+                                    className={`flex-1 py-1.5 sm:py-2.5 text-xs sm:text-sm font-[800] rounded-lg sm:rounded-xl transition-all ${difficulty === d ? 'bg-white text-brand-600 shadow-sm scale-105' : 'text-brand-900/50 hover:text-brand-600'}`}>
+                                    {d.split(' ')[0]}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Game Board Section */}
+                    <div className="relative">
+                        <Board 
+                            grid={grid} 
+                            selectedCell={selectedCell} 
+                            onCellClick={(r, c) => setSelectedCell({r, c})} 
+                            status={status} 
+                        />
+                        
+                        {/* Status Message Overlay */}
+                        <div className={`absolute -bottom-12 sm:-bottom-14 left-0 right-0 flex justify-center transition-all duration-300 pointer-events-none z-20 ${msg ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-4 scale-90'}`}>
+                            <div className={`px-3.5 sm:px-5 py-1.5 sm:py-2.5 rounded-full text-xs sm:text-base font-black shadow-lg flex items-center gap-1.5 sm:gap-2 border-2
+                                ${msg?.type === 'error' ? 'bg-orange-50 text-orange-700 border-orange-200' : 
+                                  msg?.type === 'success' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                                  'bg-brand-600 text-white border-brand-500'}`}>
+                                {msg?.type === 'info' ? <Heart size={14} fill="currentColor" /> : <Info size={14}/>}
+                                {msg?.text}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Celebration / Finish Card */}
+                    {(status === 'won' || status === 'given_up') && (
+                        <div className={`mt-14 sm:mt-18 w-full p-6 sm:p-8 rounded-[28px] sm:rounded-[36px] shadow-2xl text-center transform scale-105 transition-all duration-700 ${status === 'won' ? 'bg-gradient-to-br from-brand-500 to-green-600 animate-bounce' : 'bg-gradient-to-br from-slate-400 to-slate-500'}`}>
+                            {status === 'won' ? <PartyPopper size={40} className="mx-auto text-white mb-3 sm:size-50" /> : <Star size={40} className="mx-auto text-white mb-3 sm:size-50" fill="white" />}
+                            <h2 className="text-2xl sm:text-3xl font-black text-white mb-1 italic">{status === 'won' ? 'YOU DID IT!' : 'GOOD EFFORT!'}</h2>
+                            <p className="text-white font-black text-lg sm:text-xl leading-tight opacity-95">{motto}</p>
+                            <div className="mt-4 flex justify-center gap-1.5">
+                                {[1,2,3,4,5].map(i => <Star key={i} size={16} fill="white" className="animate-pulse" />)}
+                            </div>
+                            <button onClick={() => startNewGame()} className="mt-6 bg-white text-brand-600 font-black px-5 py-2.5 rounded-full shadow-md active:scale-95 transition-all text-sm">
+                                Try Another One!
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Inputs */}
+                    {status === 'playing' && (
+                        <Controls 
+                            onInput={handleInput} 
+                            onCheck={handleCheck} 
+                            onHint={handleHint} 
+                            onGiveUp={handleGiveUp}
+                            onNewGame={() => startNewGame()} 
+                            status={status} 
+                            hintUsed={hintUsed} 
+                        />
+                    )}
+
+                    {/* Darker labels for footer instructions */}
+                    <div className="mt-8 sm:mt-10 text-brand-900/60 text-[10px] sm:text-xs font-black tracking-widest uppercase flex flex-wrap justify-center gap-2 sm:gap-4 mb-4">
+                         <span className="bg-brand-100 px-2.5 py-1 rounded-full text-brand-800">Enter = Check</span>
+                         <span className="bg-brand-100 px-2.5 py-1 rounded-full text-brand-800">Arrows = Move</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
