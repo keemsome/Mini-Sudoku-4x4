@@ -526,7 +526,7 @@ export default function App() {
             <Sparkles size={28} className="mobile-compact:size-24 sm:size-40" fill="currentColor" strokeWidth={3} />
           </div>
           <h1 className="text-[1.7rem] mobile-compact:text-[1.5rem] sm:text-4xl font-[900] text-brand-900 tracking-tight">Magic Sudoku</h1>
-          <p className="text-brand-700/90 font-bold text-[13px] mobile-compact:text-xs sm:text-base max-w-xs sm:max-w-none">The Number Puzzle Adventure!</p>
+          <p className="text-brand-700/90 font-bold text-[13px] mobile-compact:text-xs sm:text-base max-w-xs sm:max-w-none mobile-compact:hidden">The Number Puzzle Adventure!</p>
         </div>
 
         <div className="bg-brand-100/90 p-1.5 mobile-compact:p-1 rounded-2xl sm:rounded-[28px] flex w-full shadow-sm">
@@ -549,25 +549,31 @@ export default function App() {
           ))}
         </div>
 
-        <div className="mt-2.5 mobile-compact:mt-2 min-h-[3.15rem] mobile-compact:min-h-[2.8rem] rounded-2xl mobile-compact:rounded-[18px] bg-white/80 border border-white/80 px-3.5 mobile-compact:px-3 py-2.5 mobile-compact:py-2 text-left shadow-sm">
+        <div className="mt-2.5 mobile-compact:mt-2 min-h-[3.15rem] mobile-compact:min-h-[2.8rem] rounded-2xl mobile-compact:rounded-[18px] bg-white/80 border border-white/80 px-3.5 mobile-compact:px-3 py-2.5 mobile-compact:py-2 text-left shadow-sm mobile-compact:hidden">
           <p className="text-[10px] mobile-compact:text-[9px] font-black uppercase tracking-[0.22em] text-brand-700/60">{difficulty.split(' ')[0]} mode</p>
           <p className="mt-0.5 text-[13px] mobile-compact:text-[12px] sm:text-[15px] font-bold text-slate-600 leading-snug">{difficultyHelperText}</p>
         </div>
+
+        <p className="hidden mobile-compact:block mt-1.5 text-[11px] font-bold text-brand-800/70">
+          {difficulty.split(' ')[0]}: {difficulty === DIFFICULTY.HARD ? 'no hints' : 'one hint available'}
+        </p>
       </div>
 
-      <div className="w-full">
+      <div className="w-full relative">
         <Board grid={grid} selectedCell={selectedCell} onCellSelect={(r, c) => setSelectedCell({ r, c })} status={status} />
 
-        <div className="mt-2.5 mobile-compact:mt-2 min-h-[50px] mobile-compact:min-h-[44px] sm:min-h-[76px] flex items-center justify-center">
+        <div
+          className={`absolute inset-x-3 top-1/2 -translate-y-1/2 sm:inset-x-8 flex justify-center pointer-events-none transition-all duration-300 z-30 ${
+            msg ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+          }`}
+        >
           <div
-            className={`w-full max-w-sm px-3.5 mobile-compact:px-3 sm:px-6 py-2 mobile-compact:py-1.5 sm:py-3 rounded-[18px] mobile-compact:rounded-[16px] sm:rounded-full text-[13px] mobile-compact:text-[12px] sm:text-lg font-black shadow-xl flex items-center justify-center text-center gap-1.5 sm:gap-3 border-2 sm:border-4 transition-all duration-300 ${
-              msg ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-2 scale-95'
-            } ${
+            className={`w-full max-w-xs sm:max-w-sm px-3.5 mobile-compact:px-3 sm:px-6 py-2 mobile-compact:py-1.5 sm:py-3 rounded-[18px] mobile-compact:rounded-[16px] sm:rounded-full text-[13px] mobile-compact:text-[12px] sm:text-lg font-black shadow-xl flex items-center justify-center text-center gap-1.5 sm:gap-3 border-2 sm:border-4 backdrop-blur-sm ${
               msg?.type === 'error'
-                ? 'bg-orange-50 text-orange-600 border-orange-200'
+                ? 'bg-orange-50/96 text-orange-700 border-orange-200'
                 : msg?.type === 'success'
-                  ? 'bg-blue-50 text-blue-600 border-blue-200'
-                  : 'bg-brand-600 text-white border-brand-500'
+                  ? 'bg-blue-50/96 text-blue-700 border-blue-200'
+                  : 'bg-brand-600/96 text-white border-brand-500'
             }`}
           >
             {msg?.type === 'info' ? <Heart size={16} fill="currentColor" /> : <Info size={16} />}
