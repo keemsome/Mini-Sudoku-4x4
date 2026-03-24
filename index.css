@@ -223,12 +223,37 @@ button {
   animation: celebrate-pop 1.8s ease-in-out infinite;
 }
 
+.celebrate-pop-once {
+  animation: celebrate-pop-once 0.85s cubic-bezier(0.2, 0.9, 0.3, 1.2) 1 both;
+}
+
 .gentle-float {
   animation: gentle-float 2.8s ease-in-out infinite;
 }
 
 .soft-pulse {
   animation: soft-pulse 1.7s ease-in-out infinite;
+}
+
+.firework-burst {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+  animation: firework-core 0.9s ease-out 1 both;
+  pointer-events: none;
+}
+
+.firework-ray {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 38px;
+  border-radius: 999px;
+  background: linear-gradient(to top, color-mix(in srgb, var(--firework-color) 20%, transparent), var(--firework-color));
+  transform-origin: center 0;
+  animation: firework-ray 0.9s ease-out 1 both;
 }
 
 @keyframes bounce {
@@ -258,6 +283,23 @@ button {
   }
 }
 
+@keyframes celebrate-pop-once {
+  0% {
+    transform: translateY(8px) scale(0.72) rotate(-10deg);
+    opacity: 0;
+  }
+
+  55% {
+    transform: translateY(-6px) scale(1.1) rotate(8deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
 @keyframes gentle-float {
   0%,
   100% {
@@ -279,6 +321,40 @@ button {
   50% {
     transform: scale(1.08);
     opacity: 1;
+  }
+}
+
+@keyframes firework-core {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+}
+
+@keyframes firework-ray {
+  0% {
+    opacity: 0;
+    height: 0;
+  }
+
+  35% {
+    opacity: 1;
+    height: 38px;
+  }
+
+  100% {
+    opacity: 0;
+    height: 52px;
   }
 }
 
@@ -313,8 +389,11 @@ button {
   .cell-anim,
   .bounce-in,
   .celebrate-pop,
+  .celebrate-pop-once,
   .gentle-float,
   .soft-pulse,
+  .firework-burst,
+  .firework-ray,
   .btn-press:active {
     animation: none !important;
     transition: none !important;

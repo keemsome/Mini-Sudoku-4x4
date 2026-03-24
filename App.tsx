@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import {
   CheckCircle2,
   Eraser,
@@ -606,27 +606,59 @@ export default function App() {
       {(status === 'won' || status === 'given_up') && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] px-4">
           <div
-            className={`w-full max-w-sm p-6 sm:p-8 rounded-[28px] sm:rounded-[34px] shadow-2xl text-center border-2 border-white/30 ${
+            className={`w-full max-w-sm p-6 sm:p-8 rounded-[28px] sm:rounded-[34px] shadow-2xl text-center border-2 border-white/30 relative overflow-hidden ${
               status === 'won' ? 'bg-gradient-to-br from-brand-500 to-green-600' : 'bg-gradient-to-br from-slate-400 to-slate-500'
             }`}
           >
+            {status === 'won' && (
+              <>
+                {[
+                  { left: '18%', top: '22%', delay: '0s', hue: '#fde047' },
+                  { left: '80%', top: '18%', delay: '0.12s', hue: '#fca5a5' },
+                  { left: '28%', top: '72%', delay: '0.2s', hue: '#93c5fd' },
+                  { left: '74%', top: '68%', delay: '0.32s', hue: '#c4b5fd' },
+                ].map((burst, index) => (
+                  <span
+                    key={`${burst.left}-${burst.top}`}
+                    className="firework-burst"
+                    style={
+                      {
+                        left: burst.left,
+                        top: burst.top,
+                        animationDelay: burst.delay,
+                        '--firework-color': burst.hue,
+                      } as CSSProperties
+                    }
+                    aria-hidden="true"
+                  >
+                    {Array.from({ length: 8 }, (_, rayIndex) => (
+                      <span
+                        key={`${index}-${rayIndex}`}
+                        className="firework-ray"
+                        style={{ transform: `translate(-50%, -50%) rotate(${rayIndex * 45}deg)` }}
+                      />
+                    ))}
+                  </span>
+                ))}
+              </>
+            )}
             {status === 'won' ? (
-              <PartyPopper size={42} className="mx-auto text-white mb-3 celebrate-pop" />
+              <PartyPopper size={42} className="mx-auto text-white mb-3 celebrate-pop-once relative z-10" />
             ) : (
               <Star size={42} className="mx-auto text-white mb-3 gentle-float" fill="white" />
             )}
-            <h2 className="text-[1.75rem] sm:text-4xl font-black text-white mb-2 italic">
+            <h2 className="text-[1.75rem] sm:text-4xl font-black text-white mb-2 italic relative z-10">
               {status === 'won' ? 'YOU DID IT!' : 'GOOD EFFORT!'}
             </h2>
-            <p className="text-white font-black text-lg sm:text-2xl leading-tight opacity-95">{motto}</p>
-            <div className="mt-5 flex justify-center gap-2">
+            <p className="text-white font-black text-lg sm:text-2xl leading-tight opacity-95 relative z-10">{motto}</p>
+            <div className="mt-5 flex justify-center gap-2 relative z-10">
               {[1, 2, 3, 4, 5].map((item) => (
                 <Star key={item} size={18} fill="white" className="soft-pulse" />
               ))}
             </div>
             <button
               onClick={() => startNewGame()}
-              className="mt-6 w-full bg-white text-brand-600 font-black px-6 py-3 rounded-full shadow-lg active:scale-95 transition-all"
+              className="mt-6 w-full bg-white text-brand-600 font-black px-6 py-3 rounded-full shadow-lg active:scale-95 transition-all relative z-10"
             >
               Try Another One!
             </button>
