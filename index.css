@@ -1,0 +1,52 @@
+body {
+  margin: 0;
+  background-color: #f0fdf4;
+  background-image: radial-gradient(#dcfce7 1px, transparent 1px);
+  background-size: 24px 24px;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  font-family: 'Quicksand', sans-serif;
+}
+
+button {
+  font: inherit;
+}
+
+.cell-anim {
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-press:active {
+  transform: scale(0.92);
+}
+
+.bounce-in {
+  animation: bounce 0.5s cubic-bezier(0.36, 0, 0.66, -0.56) forwards;
+}
+
+@keyframes bounce {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 0;
+}
+
+@media (max-height: 700px) {
+  .app-container {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .header-section {
+    margin-bottom: 1rem;
+  }
+}
