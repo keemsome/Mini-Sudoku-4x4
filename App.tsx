@@ -582,30 +582,6 @@ export default function App() {
         </div>
       </div>
 
-      {(status === 'won' || status === 'given_up') && (
-        <div
-          className={`mt-8 sm:mt-12 w-full p-7 sm:p-10 rounded-[32px] sm:rounded-[40px] shadow-2xl text-center transform scale-[1.02] transition-all duration-700 ${
-            status === 'won' ? 'bg-gradient-to-br from-brand-500 to-green-600' : 'bg-gradient-to-br from-slate-400 to-slate-500'
-          }`}
-        >
-          {status === 'won' ? (
-            <PartyPopper size={48} className="mx-auto text-white mb-4 sm:size-60 celebrate-pop" />
-          ) : (
-            <Star size={48} className="mx-auto text-white mb-4 sm:size-60 gentle-float" fill="white" />
-          )}
-          <h2 className="text-3xl sm:text-4xl font-black text-white mb-2 italic">{status === 'won' ? 'YOU DID IT!' : 'GOOD EFFORT!'}</h2>
-          <p className="text-white font-black text-xl sm:text-2xl leading-tight opacity-90">{motto}</p>
-          <div className="mt-6 flex justify-center gap-2">
-            {[1, 2, 3, 4, 5].map((item) => (
-              <Star key={item} size={20} fill="white" className="soft-pulse" />
-            ))}
-          </div>
-          <button onClick={() => startNewGame()} className="mt-7 bg-white text-brand-600 font-black px-6 py-3 rounded-full shadow-lg active:scale-95 transition-all">
-            Try Another One!
-          </button>
-        </div>
-      )}
-
       {status === 'playing' && (
         <Controls
           onInput={handleInput}
@@ -626,6 +602,37 @@ export default function App() {
         <span className="bg-brand-100/50 px-3 py-1 rounded-full text-brand-900/60">Arrows = Move</span>
         <span className="bg-brand-100/50 px-3 py-1 rounded-full text-brand-900/60">Tab = Focus Board</span>
       </div>
+
+      {(status === 'won' || status === 'given_up') && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/30 backdrop-blur-[2px] px-4">
+          <div
+            className={`w-full max-w-sm p-6 sm:p-8 rounded-[28px] sm:rounded-[34px] shadow-2xl text-center border-2 border-white/30 ${
+              status === 'won' ? 'bg-gradient-to-br from-brand-500 to-green-600' : 'bg-gradient-to-br from-slate-400 to-slate-500'
+            }`}
+          >
+            {status === 'won' ? (
+              <PartyPopper size={42} className="mx-auto text-white mb-3 celebrate-pop" />
+            ) : (
+              <Star size={42} className="mx-auto text-white mb-3 gentle-float" fill="white" />
+            )}
+            <h2 className="text-[1.75rem] sm:text-4xl font-black text-white mb-2 italic">
+              {status === 'won' ? 'YOU DID IT!' : 'GOOD EFFORT!'}
+            </h2>
+            <p className="text-white font-black text-lg sm:text-2xl leading-tight opacity-95">{motto}</p>
+            <div className="mt-5 flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map((item) => (
+                <Star key={item} size={18} fill="white" className="soft-pulse" />
+              ))}
+            </div>
+            <button
+              onClick={() => startNewGame()}
+              className="mt-6 w-full bg-white text-brand-600 font-black px-6 py-3 rounded-full shadow-lg active:scale-95 transition-all"
+            >
+              Try Another One!
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
